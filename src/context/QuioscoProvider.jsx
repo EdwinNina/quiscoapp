@@ -1,14 +1,19 @@
-import axios from 'axios'
 import { useState, useEffect, createContext } from 'react'
+import axios from 'axios'
+import { toast } from 'react-toastify'
+import { useRouter } from 'next/router'
 
 const QuioscoContext = createContext()
 
 const QuioscoProvider = ({ children }) => {
+   const router = useRouter()
    const [categorias, setCategorias] = useState([])
    const [categoriaActual, setCategoriaActual] = useState({})
    const [producto, setProducto] = useState({})
    const [modal, setModal] = useState(false)
    const [pedido, setPedido] = useState([])
+   const [totalPedido, setTotalPedido] = useState(0)
+   const [nombre, setNombre] = useState('')
 
    const obtenerCategorias = async () => {
       const { data } = await axios('/api/categorias')
@@ -21,6 +26,7 @@ const QuioscoProvider = ({ children }) => {
    const handleCategoriaActual = id => {
       const categoria = categorias.find( cat => cat.id === id)
       setCategoriaActual(categoria)
+      router.push('/')
    }
    
    const handleProducto = producto => {
@@ -33,12 +39,33 @@ const QuioscoProvider = ({ children }) => {
 
    const handlePedido = producto => {
       if(pedido.some( productoState => productoState.id === producto.id)){
+         const pedidoActualizado = pedido.map( productoState => productoState.id === producto.id ? producto : productoState)
+         setPedido(pedidoActualizado)
+         toast.success('Guardado Correctamente')
       }else{
-         setPedido({
+         setPedido([
             ...pedido,
             producto
-         })
+         ])
+         toast.success('Pedido agregado correctamente')
       }
+      handleModal()
+   }
+
+   const handleEditarPedido = id => {
+      const productoSeleccionado = pedido.find( productoState => productoState.id === id)
+      setProducto(productoSeleccionado)
+      handleModal()
+   }
+
+   const handleEliminarProductoPedido = id => {
+      const productosPedido = pedido.filter( productoState => productoState.id !== id)
+      setPedido(productosPedido)
+   }
+
+   const obtenerTotalPedido = () => {
+      const total = pedido.reduce((acc, curr) => acc + (curr.cantidad * curr.precio), 0)
+      setTotalPedido(total)
    }
 
    useEffect(() => {
@@ -53,7 +80,15 @@ const QuioscoProvider = ({ children }) => {
             handleProducto,
             handleModal,
             modal,
-            producto
+            producto,
+            handlePedido,
+            pedido,
+            handleEditarPedido,
+            handleEliminarProductoPedido,
+            obtenerTotalPedido,
+            totalPedido,
+            setNombre,
+            nombre
          }}
       >
          { children }
